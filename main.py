@@ -2,7 +2,7 @@
 # NON-debugged code
 
 import argparse
-import sys
+import sys, os
 import numpy as np
 
 from util.Vocab import Vocab
@@ -99,7 +99,9 @@ def train(train_dataset, dev_dataset, test_dataset, vecs, iter_num = 10000):
                     best_iter = iter
                     print('New best valid MAP!')
                     if FLAGS.save_path:
-                        save_path = saver.save(sess, FLAGS.save_path)
+                        if not os.path.isdir(FLAGS.save_path):
+                            os.mkdir(FLAGS.save_path)
+                        save_path = saver.save(sess, FLAGS.save_path + '/model.tf')
                         print("Model saved")
                 else:
                     not_improving += 1
@@ -161,6 +163,6 @@ if __name__ == '__main__':
     tf.app.flags.DEFINE_string('eval_freq', 1000, 'evaluate every x batches')
     tf.app.flags.DEFINE_string('sampling', 'random', 'sampling strategy, max or random')
     tf.app.flags.DEFINE_string('load_model', '', 'path to load model')
-    tf.app.flags.DEFINE_string('save_path', 'save_models/model.tf', 'path to save model')
+    tf.app.flags.DEFINE_string('save_path', 'save_models', 'path to save model')
     
     tf.app.run()
