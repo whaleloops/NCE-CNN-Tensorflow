@@ -9,7 +9,33 @@ import tensorflow as tf
 
 def init_weight(shape, name):
   return tf.Variable(tf.truncated_normal(shape, stddev=0.01), name=name)
-        
+
+def compute_l1_distance(x, y):
+  with tf.name_scope('l1_distance'):
+    d = tf.reduce_sum(tf.abs(tf.subtract(x, y)), axis=1)
+  return d
+
+def compute_euclidean_distance(x, y):
+  with tf.name_scope('euclidean_distance'):
+    d = tf.sqrt(tf.reduce_sum(tf.square(tf.subtract(x, y)), axis=1))
+  return d
+
+def compute_cosine_distance(x, y):
+  with tf.name_scope('cosine_distance'):
+    x_norm = tf.sqrt(tf.reduce_sum(tf.square(x), axis=1))
+    y_norm = tf.sqrt(tf.reduce_sum(tf.square(y), axis=1))
+    x_y = tf.reduce_sum(tf.multiply(x, y), axis=1)
+    d = tf.divide(x_y, tf.multiply(x_norm, y_norm))
+  return d
+
+def comU1(x, y):
+  result = [compute_cosine_distance(x, y), compute_euclidean_distance(x, y), compute_l1_distance(x, y)]
+  return tf.stack(result, axis=1)
+
+def comU2(x, y):
+  result = [compute_cosine_distance(x, y), compute_euclidean_distance(x, y)]
+  return tf.stack(result, axis=1)
+
 class createModel():
   def __init__(self, num_classes, embedding_size, filter_sizes, num_filters, n_hidden,
              input_x1, input_x2, input_y, dropout_keep_prob):
@@ -93,16 +119,18 @@ class createModel():
     with tf.name_scope("bulid_block_A"):
       for pooling in self.poolings:
         pools = []
-        for i, ws in enumerate(self.filter_sizes):
+        for i, ws in enumerate(self.filter_sizes): # ws: window size
           #print x.get_shape(), self.W1[i].get_shape()
-          with tf.name_scope("conv-pool-%s" %ws):
+          with tf.name_scope("conv-ws%d" %ws):
             conv = tf.nn.conv2d(x, self.W1[i], strides=[1, 1, 1, 1], padding="VALID")
             #print conv.get_shape()
             conv = tf.nn.relu(conv + self.b1[i])  # [batch_size, sentence_length-ws+1, 1, num_filters_A]
+          with tf.name_scope("pool-ws%d" %ws):
             pool = pooling(conv, axis=1)
           pools.append(pool)
         out.append(pools)
       return out
+    #TODO: verify if torch code has block A seperated by different filter size for one x
 
   def bulid_block_B(self, x):
     out = []
@@ -119,33 +147,34 @@ class createModel():
 
   #%%
   # 2.4 Build inference graph.
+  # TODO: check fea_h, fea_a, fea_b implementation in torch code
   def cnn_inference(self):
     sent1 = self.bulit_block_A(self.input_x1)
     sent2 = self.bulit_block_A(self.input_x2)
     fea_h = []
     with tf.name_scope("cal_dis_with_alg1"):
-        for i in range(3):
-            regM1 = tf.concat(sent1[i], 1)
-            regM2 = tf.concat(sent2[i], 1)
-            for k in range(self.num_filters[0]):
-                fea_h.append(comU2(regM1[:, :, k], regM2[:, :, k]))
+      for i in range(3):
+        regM1 = tf.concat(sent1[i], 1)
+        regM2 = tf.concat(sent2[i], 1)
+        for k in range(self.num_filters[0]):
+          fea_h.append(comU2(regM1[:, :, k], regM2[:, :, k]))
 
     fea_a = []
     with tf.name_scope("cal_dis_with_alg2_2-9"):
-        for i in range(3):
-            for j in range(len(self.filter_sizes)):
-                for k in range(len(self.filter_sizes)):
-                    fea_a.append(comU1(sent1[i][j][:, 0, :], sent2[i][k][:, 0, :]))
+      for i in range(3):
+        for j in range(len(self.filter_sizes)):
+          for k in range(len(self.filter_sizes)):
+            fea_a.append(comU1(sent1[i][j][:, 0, :], sent2[i][k][:, 0, :]))
 
     sent1 = self.bulid_block_B(self.input_x1)
     sent2 = self.bulid_block_B(self.input_x2)
 
     fea_b = []
     with tf.name_scope("cal_dis_with_alg2_last"):
-        for i in range(len(self.poolings)-1):
-            for j in range(len(self.filter_sizes)-1):
-                for k in range(self.num_filters[1]):
-                    fea_b.append(comU1(sent1[i][j][:, :, k], sent2[i][j][:, :, k]))
+      for i in range(len(self.poolings)-1):
+        for j in range(len(self.filter_sizes)-1):
+          for k in range(self.num_filters[1]):
+            fea_b.append(comU1(sent1[i][j][:, :, k], sent2[i][j][:, :, k]))
     #self.fea_b = fea_b
     fea = tf.concat(fea_h + fea_b, 1)
 
