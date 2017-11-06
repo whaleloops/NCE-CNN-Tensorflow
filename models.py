@@ -36,9 +36,9 @@ def comU2(x, y):
   result = [compute_cosine_distance(x, y), compute_euclidean_distance(x, y)]
   return tf.stack(result, axis=1)
 
-class createModel():
+class MPSSN():
   def __init__(self, num_classes, embedding_size, filter_sizes, num_filters, n_hidden,
-             input_x1, input_x2, input_y, dropout_keep_prob):
+             input_x1, input_x2, input_y, reg_lambda, dropout_keep_prob):
     '''
     :param sequence_length:
     :param num_classes:
@@ -130,7 +130,6 @@ class createModel():
           pools.append(pool)
         out.append(pools)
       return out
-    #TODO: verify if torch code has block A seperated by different filter size for one x
 
   def bulid_block_B(self, x):
     out = []
@@ -147,7 +146,6 @@ class createModel():
 
   #%%
   # 2.4 Build inference graph.
-  # TODO: check fea_h, fea_a, fea_b implementation in torch code
   def cnn_inference(self):
     sent1 = self.bulit_block_A(self.input_x1)
     sent2 = self.bulit_block_A(self.input_x2)
@@ -176,7 +174,7 @@ class createModel():
           for k in range(self.num_filters[1]):
             fea_b.append(comU1(sent1[i][j][:, :, k], sent2[i][j][:, :, k]))
     #self.fea_b = fea_b
-    fea = tf.concat(fea_h + fea_b, 1)
+    fea = tf.concat(fea_h + fea_b + fea_a, 1) #TODO orig: fea = tf.concat(fea_h + fea_b, 1)
 
     with tf.name_scope("full_connect_layer"):
       h = tf.nn.tanh(tf.matmul(fea, self.Wh) + self.bh)
@@ -191,6 +189,8 @@ class createModel():
     with tf.name_scope("loss"):
       # Create an operation that calculates loss.
       loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=out, labels=self.input_y))
+      regularizers = tf.nn.l2_loss(self.W1) + tf.nn.l2_loss(self.W2) + tf.nn.l2_loss(self.Wh)
+      loss = tf.reduce_mean(loss + reg_lambda * regularizers)
       # Create the gradient descent optimizer with the given learning rate.
       optimizer = tf.train.AdamOptimizer(learning_rate)
       # Create a variable to track the global step.
