@@ -180,7 +180,7 @@ class SentencePairEncoderMPSSN(SentencePairEncoder):
     # print out.get_shape()
     # Calc score for evaluation
     softmax_result = tf.nn.softmax(logits=out, dim=1)
-    self.scores = tf.slice(softmax_result, begin=[0,1],size=[-1,1])
+    self.scores = tf.reshape(tf.slice(softmax_result, begin=[0,1],size=[-1,1]), [-1])
     # Calc loss
     losses = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=out, labels=self.labels))
     l2_loss = tf.add_n([tf.nn.l2_loss(w) for w in tf.trainable_variables() if 'word_embeddings' not in w.name])
