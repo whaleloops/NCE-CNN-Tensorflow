@@ -147,9 +147,9 @@ def main(argv):
         dev_dir = data_dir + 'dev/'
         test_dir = data_dir + 'test/'
 
-    train_dataset = read_relatedness_dataset(train_dir, vocab) # This is a dict
-    dev_dataset = read_relatedness_dataset(dev_dir, vocab)
-    test_dataset = read_relatedness_dataset(test_dir, vocab)
+    train_dataset = read_relatedness_dataset(train_dir, vocab, debug=True) #TODO: change debug to false # This is a dict
+    dev_dataset = read_relatedness_dataset(dev_dir, vocab, debug=True)
+    test_dataset = read_relatedness_dataset(test_dir, vocab, debug=True)
     print('train_dir: %s, num train = %d' % (train_dir, train_dataset['size']))
     print('dev_dir: %s, num dev = %d' % (dev_dir, dev_dataset['size']))
     print('test_dir: %s, num test = %d' % (test_dir, test_dataset['size']))

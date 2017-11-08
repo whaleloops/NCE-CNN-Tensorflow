@@ -8,36 +8,57 @@ def read_embedding(vocab_path, emb_path):
   embedding = np.load(emb_path)
   return vocab, embedding
 
-def read_sentences(path, vocab):
+def read_sentences(path, vocab, debug=False):
   sentences = []
   file = open(path, "r")
-  while True:
-    line = file.readline().rstrip('\n')
-    if line == "":
-      break
-    tokens = line.split()  # TODO0: check if this splits str well?
-    length = len(tokens)
-    sent = np.zeros(max(length,3))
-    counter = 0
-    for i in range(0,length):
-      token = tokens[i]
-      sent[i] = int(vocab.index(token))
-    if length < 3:
-      for i in range(length, 3):
-        sent[i] = int(vocab.index('unk')) # sent[len]
-    if sent.sum() == 0:
-      print('line: '+line)
-    sentences.append(list(sent))
+  if debug:
+    count = 0
+    while count<64:
+      line = file.readline().rstrip('\n')
+      if line == "":
+        break
+      tokens = line.split()  # TODO0: check if this splits str well?
+      length = len(tokens)
+      sent = np.zeros(max(length,3))
+      counter = 0
+      for i in range(0,length):
+        token = tokens[i]
+        sent[i] = int(vocab.index(token))
+      if length < 3:
+        for i in range(length, 3):
+          sent[i] = int(vocab.index('unk')) # sent[len]
+      if sent.sum() == 0:
+        print('line: '+line)
+      sentences.append(list(sent))
+      count += 1
+  else:
+    while True:
+      line = file.readline().rstrip('\n')
+      if line == "":
+        break
+      tokens = line.split()  # TODO0: check if this splits str well?
+      length = len(tokens)
+      sent = np.zeros(max(length,3))
+      counter = 0
+      for i in range(0,length):
+        token = tokens[i]
+        sent[i] = int(vocab.index(token))
+      if length < 3:
+        for i in range(length, 3):
+          sent[i] = int(vocab.index('unk')) # sent[len]
+      if sent.sum() == 0:
+        print('line: '+line)
+      sentences.append(list(sent))
   file.close()
   return sentences
 
-def read_relatedness_dataset(direc, vocab):
+def read_relatedness_dataset(direc, vocab, debug=False):
   dataset = {}
   dataset['vocab'] = vocab
   file1 = 'a.toks'
   file2 = 'b.toks'
-  dataset['lsents'] = read_sentences(direc + file1, vocab)
-  dataset['rsents'] = read_sentences(direc + file2, vocab)
+  dataset['lsents'] = read_sentences(direc + file1, vocab, debug)
+  dataset['rsents'] = read_sentences(direc + file2, vocab, debug)
   dataset['size'] = len(dataset['lsents'])
   id_file = open(direc + 'id.txt', 'r')
   sim_file = open(direc + 'sim.txt')
@@ -47,7 +68,10 @@ def read_relatedness_dataset(direc, vocab):
   numrels_file = open(direc + 'numrels.txt')
   boundary = []
   counter = 0
-  while True:
+  if debug:
+    boundary = [0,34,48,64]
+  else:   
+    while True:
       line = boundary_file.readline().rstrip('\n')
       if line == "":
         break

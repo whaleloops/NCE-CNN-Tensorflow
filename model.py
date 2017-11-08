@@ -123,7 +123,8 @@ class SentencePairEncoderMPSSN(SentencePairEncoder):
                tf.Variable(tf.constant(0.1, shape=[self.num_filters[1], self._embed_dim]), "b2_2")]
     items = (self.ngram + 1)*3
     # inputNum = 2*items*items/3+NumFilter*items*items/3+6*NumFilter+(2+NumFilter)*2*ngram*conceptFNum --PoinPercpt model!
-    self.h = 2*items*items/3+self.num_filters[0]*items*items/3+6*self.num_filters[0]+(2+self.num_filters[0])*2*self.ngram*self.num_filters[1] #TODO: change this
+    self.h = 2*items*items/3 + self.num_filters[0]*items*items/3 + 6*self.num_filters[0] + (2+self.num_filters[0])*2*self.ngram*self.num_filters[1] #TODO: change this
+    #self.h = 2*(3*self.num_filters[0]) + (self._embed_dim+2)*(3*items*items) + (self._embed_dim+2)*(2**self.num_filters[1]*3)
     # print self.h #TODO
     self.Wh = tf.Variable(tf.random_normal([self.h, self._dim], stddev=0.01), name='Wh')
     self.bh = tf.Variable(tf.constant(0.1, shape=[self._dim]), name="bh")
