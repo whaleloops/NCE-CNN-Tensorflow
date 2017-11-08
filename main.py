@@ -63,7 +63,7 @@ def train(train_dataset, dev_dataset, test_dataset, vecs, iter_num = 10000):
         data_generator_name = DataGeneratePairWise
         
         
-    model = model_name(vecs, dim=FLAGS.dim, seq_length=FLAGS.max_length, num_filters=[300,20]) #TODO change num_filters to [300,20]
+    model = model_name(vecs, dim=FLAGS.dim, seq_length=FLAGS.max_length, num_filters=[300,20])
     optimizer = tf.train.AdamOptimizer(learning_rate=FLAGS.lr)
     saver = tf.train.Saver()
     #train = optimizer.minimize(model.loss)

@@ -29,13 +29,13 @@ def comU1(x, y):
     t3 = compute_element_l1_distance(x, y)
     result = tf.concat([tf.expand_dims(t1,1) ,tf.expand_dims(t2,1)],axis=1)
     result = tf.concat([result,t3],axis=1)
-    # print 'comu1'
+    # print 'comu1' #TODO
     # print result.get_shape()
     return result
 
 def comU2(x, y):
     result = [compute_cosine_distance(x, y), compute_euclidean_distance(x, y)]
     result = tf.stack(result, axis=1)
-    # print 'comu2'
+    # print 'comu2' #TODO
     # print result.get_shape()
     return result

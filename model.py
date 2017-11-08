@@ -121,11 +121,10 @@ class SentencePairEncoderMPSSN(SentencePairEncoder):
     self.b2 = [tf.Variable(tf.constant(0.1, shape=[self.num_filters[1], self._embed_dim]), "b2_0"),
                tf.Variable(tf.constant(0.1, shape=[self.num_filters[1], self._embed_dim]), "b2_1"),
                tf.Variable(tf.constant(0.1, shape=[self.num_filters[1], self._embed_dim]), "b2_2")]
-    items = (self.ngram + 1)*3
+    # items = (self.ngram + 1)*3
     # inputNum = 2*items*items/3+NumFilter*items*items/3+6*NumFilter+(2+NumFilter)*2*ngram*conceptFNum --PoinPercpt model!
-    self.h = 2*items*items/3 + self.num_filters[0]*items*items/3 + 6*self.num_filters[0] + (2+self.num_filters[0])*2*self.ngram*self.num_filters[1] #TODO: change this
-    #self.h = 2*(3*self.num_filters[0]) + (self._embed_dim+2)*(3*items*items) + (self._embed_dim+2)*(2**self.num_filters[1]*3)
-    # print self.h #TODO
+    # self.h = 2*items*items/3 + self.num_filters[0]*items*items/3 + 6*self.num_filters[0] + (2+self.num_filters[0])*2*self.ngram*self.num_filters[1]
+    self.h = 2*(3*self.num_filters[0]) + (self.num_filters[0]+2)*(3*(self.ngram + 1)*(self.ngram + 1)) + (self._embed_dim+2)*(2*self.num_filters[1]*3)
     self.Wh = tf.Variable(tf.random_normal([self.h, self._dim], stddev=0.01), name='Wh')
     self.bh = tf.Variable(tf.constant(0.1, shape=[self._dim]), name="bh")
 
@@ -143,7 +142,7 @@ class SentencePairEncoderMPSSN(SentencePairEncoder):
     #(batchsize, sentence_length, embed_dimmension, 1)
     q_features = self.produce_feature(self.input_questions, self.input_question_lens) 
     a_features = self.produce_feature(self.input_answers, self.input_answer_lens)
-    # self.labels = tf.expand_dims(self.labels, 1) #TODO
+    # self.labels = tf.expand_dims(self.labels, 1)
     # bloack A
     sent1 = self.bulit_block_A(q_features)
     sent2 = self.bulit_block_A(a_features)
@@ -173,7 +172,7 @@ class SentencePairEncoderMPSSN(SentencePairEncoder):
     fea = tf.concat(fea_h + fea_b + fea_a, 1)
     # FC layer
     with tf.name_scope("full_connect_layer"):
-      # print fea.get_shape() #TODO
+      # print fea.get_shape()
       # print self.Wh.get_shape()
       h = tf.nn.tanh(tf.matmul(fea, self.Wh) + self.bh)
       h = tf.nn.dropout(h, self.keep_prob)
