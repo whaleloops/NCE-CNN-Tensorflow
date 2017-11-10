@@ -82,8 +82,8 @@ def train(train_dataset, dev_dataset, test_dataset, vecs, iter_num = 10000):
     best_iter = 0
     not_improving = 0
     with tf.Session() as sess:
-        sess = tf_debug.LocalCLIDebugWrapperSession(sess) #DEBUG
-        sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan) #DEBUG
+        # sess = tf_debug.LocalCLIDebugWrapperSession(sess) #DEBUG
+        # sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan) #DEBUG
         init = tf.global_variables_initializer()
         sess.run(init)
         data_generator = data_generator_name(model, sess, train_dataset, FLAGS.batch_size, FLAGS.max_length, FLAGS.sampling)
