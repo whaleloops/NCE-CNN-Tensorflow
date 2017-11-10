@@ -47,6 +47,7 @@ class DataGeneratePointWise:
         labels_arr = np.array(labels_arr)
         labels = np.zeros((labels_arr.shape[0], num_classes))
         labels[np.arange(labels_arr.shape[0]), labels_arr] = 1
+        
         feed_dict = {self.model.input_questions: np.array(qs, dtype = np.int32), 
                      self.model.input_question_lens: np.array(qlens, dtype = np.int32),
                      self.model.input_answers: np.array(ans, dtype = np.int32), 

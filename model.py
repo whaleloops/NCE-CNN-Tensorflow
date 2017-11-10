@@ -132,7 +132,7 @@ class SentencePairEncoderMPSSN(SentencePairEncoder):
 
   def produce_feature(self, sentences, lens):
     with tf.name_scope("embendding"):
-      embed_layer = tf.nn.embedding_lookup(self.word_embeddings, sentences)
+      embed_layer = tf.nn.embedding_lookup(self.word_embeddings, sentences, name='input')
       embed_layer_mask = tf.expand_dims(tf.cast(tf.sequence_mask(lens, self._seq_length), tf.float32), 2) * embed_layer
     with tf.name_scope("reshape"):
       result = tf.reshape(embed_layer_mask, [-1, self._seq_length, self._embed_dim, 1])
@@ -169,20 +169,20 @@ class SentencePairEncoderMPSSN(SentencePairEncoder):
           for k in range(self.num_filters[1]):
             fea_b.append(comU1(sent1[i][j][:, :, k], sent2[i][j][:, :, k]))
     # concate all features together
-    fea = tf.concat(fea_h + fea_b + fea_a, 1)
+    fea = tf.concat(fea_h + fea_b + fea_a, 1, name='features')
     # FC layer
     with tf.name_scope("full_connect_layer"):
       # print fea.get_shape()
       # print self.Wh.get_shape()
       h = tf.nn.tanh(tf.matmul(fea, self.Wh) + self.bh)
-      h = tf.nn.dropout(h, self.keep_prob)
-      out = tf.matmul(h, self.Wo)
+      # h = tf.nn.dropout(h, self.keep_prob)
+      out = tf.matmul(h, self.Wo, name='out')
     # print out.get_shape()
     # Calc score for evaluation
-    softmax_result = tf.nn.softmax(logits=out, dim=1)
-    self.scores = tf.slice(softmax_result, begin=[0,1],size=[-1,1])
+    softmax_result = tf.nn.softmax(logits=out, dim=1, name='softmax')
+    self.scores = softmax_result[:,1]
     # Calc loss
-    losses = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=out, labels=self.labels))
+    losses = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=out, labels=self.labels),name='loses')
     l2_loss = tf.add_n([tf.nn.l2_loss(w) for w in tf.trainable_variables() if 'word_embeddings' not in w.name])
     reg_lambda = 0.01
     self.loss = tf.reduce_mean(losses) + reg_lambda * l2_loss

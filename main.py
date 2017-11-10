@@ -4,6 +4,7 @@
 import argparse
 import sys, os
 import numpy as np
+from tensorflow.python import debug as tf_debug
 
 from util.Vocab import Vocab
 from util.read_data import read_relatedness_dataset, read_embedding
@@ -12,6 +13,7 @@ from model import *
 from evaluator import *
 from data_generate import * 
 FLAGS = tf.app.flags.FLAGS
+
 
 def load_glove_word_embeddings(vocab):
     emb_dir = 'data/glove/'
@@ -63,7 +65,7 @@ def train(train_dataset, dev_dataset, test_dataset, vecs, iter_num = 10000):
         data_generator_name = DataGeneratePairWise
         
         
-    model = model_name(vecs, dim=FLAGS.dim, seq_length=FLAGS.max_length, num_filters=[300,20])
+    model = model_name(vecs, dim=FLAGS.dim, seq_length=FLAGS.max_length, num_filters=[3,2]) #TODO: 300,20
     optimizer = tf.train.AdamOptimizer(learning_rate=FLAGS.lr)
     saver = tf.train.Saver()
     #train = optimizer.minimize(model.loss)
@@ -80,6 +82,8 @@ def train(train_dataset, dev_dataset, test_dataset, vecs, iter_num = 10000):
     best_iter = 0
     not_improving = 0
     with tf.Session() as sess:
+        sess = tf_debug.LocalCLIDebugWrapperSession(sess) #DEBUG
+        sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan) #DEBUG
         init = tf.global_variables_initializer()
         sess.run(init)
         data_generator = data_generator_name(model, sess, train_dataset, FLAGS.batch_size, FLAGS.max_length, FLAGS.sampling)
