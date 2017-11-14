@@ -137,13 +137,9 @@ class SentencePairEncoderMPSSN(SentencePairEncoder):
 
   def produce_feature(self, sentences, lens):
     with tf.name_scope("embendding"):
-<<<<<<< HEAD
       embed_layer = tf.nn.embedding_lookup(self.word_embeddings, sentences)
       self.sentences = sentences
       self.embed_layer = embed_layer
-=======
-      embed_layer = tf.nn.embedding_lookup(self.word_embeddings, sentences, name='input')
->>>>>>> b7d24abc7fd8491817faeecce547889d4d64e7bb
       embed_layer_mask = tf.expand_dims(tf.cast(tf.sequence_mask(lens, self._seq_length), tf.float32), 2) * embed_layer
       #embed_layer_mask = embed_layer
       self.embed_layer_mask = embed_layer_mask

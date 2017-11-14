@@ -17,15 +17,9 @@ def compute_euclidean_distance(x, y):
 
 def compute_cosine_distance(x, y):
     with tf.name_scope('cosine_distance'):
-<<<<<<< HEAD
-        x_norm = tf.sqrt(tf.reduce_sum(tf.square(x), axis=1) + 1e-6)
-        y_norm = tf.sqrt(tf.reduce_sum(tf.square(y), axis=1) + 1e-6)
-        x_y = tf.reduce_sum(tf.multiply(x, y), axis=1) + 1e-6
-=======
         x_norm = tf.sqrt(tf.reduce_sum(tf.square(x), axis=1) + 1e-12)
         y_norm = tf.sqrt(tf.reduce_sum(tf.square(y), axis=1) + 1e-12)
-        x_y = tf.reduce_sum(tf.multiply(x, y), axis=1)
->>>>>>> b7d24abc7fd8491817faeecce547889d4d64e7bb
+        x_y = tf.reduce_sum(tf.multiply(x, y), axis=1) + 1e-12
         d = tf.divide(x_y, tf.multiply(x_norm, y_norm))
         return d
 
