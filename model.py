@@ -178,15 +178,11 @@ class SentencePairEncoderMPSSN(SentencePairEncoder):
           for k in range(self.num_filters[1]):
             fea_b.append(comU1(sent1[i][j][:, :, k], sent2[i][j][:, :, k]))
     # concate all features together
-<<<<<<< HEAD
     fea = tf.concat(fea_h + fea_b + fea_a, 1)
     self.fea_h = fea_h
     self.fea_a = fea_a
     self.fea_b = fea_b
     self.fea = fea
-=======
-    fea = tf.concat(fea_h + fea_b + fea_a, 1, name='features')
->>>>>>> b7d24abc7fd8491817faeecce547889d4d64e7bb
     # FC layer
     with tf.name_scope("full_connect_layer"):
       # print fea.get_shape()
@@ -196,14 +192,9 @@ class SentencePairEncoderMPSSN(SentencePairEncoder):
       out = tf.matmul(h, self.Wo, name='out')
     # print out.get_shape()
     # Calc score for evaluation
-<<<<<<< HEAD
     self.out = out
     softmax_result = tf.nn.softmax(logits=out, dim=1)
     self.scores = softmax_result[:, 1]
-=======
-    softmax_result = tf.nn.softmax(logits=out, dim=1, name='softmax')
-    self.scores = softmax_result[:,1]
->>>>>>> b7d24abc7fd8491817faeecce547889d4d64e7bb
     # Calc loss
     losses = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=out, labels=self.labels),name='loses')
     l2_loss = tf.add_n([tf.nn.l2_loss(w) for w in tf.trainable_variables() if 'word_embeddings' not in w.name])
