@@ -3,12 +3,14 @@ import numpy as np
 from util.MPSSN_utils import *
 
 def init_weight(shape, name):
-  return tf.Variable(tf.truncated_normal(shape, stddev=0.01), name=name)
+  #return tf.Variable(tf.truncated_normal(shape, stddev=0.01), name=name)
+  return tf.get_variable(name=name, shape=shape, initializer=tf.contrib.layers.xavier_initializer(), trainable=True)
 
 class SentencePairEncoder(object):
     def __init__(self, pretrained_embeddings, dim=100,
                  use_tanh=False, verbose=False, 
-                 dropout_keep=1.0, seq_length=32, num_filters=[300,20], filter_sizes=[1,2,3,100]):
+                 dropout_keep=1.0, seq_length=32, regularization=0.01,
+                 num_filters=[300,20], filter_sizes=[1,2,3,100]):
         self._vocab_size = pretrained_embeddings.shape[0]
         self._embed_dim = pretrained_embeddings.shape[1]
         self._dim = dim
@@ -16,6 +18,7 @@ class SentencePairEncoder(object):
         self._verbose = verbose
         self._dropout_keep = dropout_keep
         self._seq_length = seq_length
+        self._regularization = regularization
         self.global_step = tf.Variable(0, name='global_step', trainable=False)
         
         self.input_questions = tf.placeholder(tf.int32, [None, seq_length], name='input_questions')
@@ -25,7 +28,7 @@ class SentencePairEncoder(object):
         self.keep_prob = tf.placeholder(tf.float32)
         self.word_embeddings = tf.get_variable(name='word_embeddings',
                                                initializer=tf.constant(pretrained_embeddings, dtype=tf.float32),
-                                               trainable=True)
+                                               trainable=False)
 
         # For MPSSN:
         self.num_filters = num_filters  # [num_filters_A, num_filters_B]
@@ -41,13 +44,13 @@ class SentencePairEncoder(object):
         This function could be override in a child class 
         for extra placeholders or parameters.
         '''
-        self.labels = tf.placeholder(tf.int32, [None], name='labels')
+        self.labels = tf.placeholder(tf.int32, [None, 2], name='labels')
         self.linear_matrix = tf.get_variable(name='linear_matrix',
                                                shape=[self._embed_dim * 2, self._dim],
                                                initializer=tf.contrib.layers.xavier_initializer(),
                                                trainable=True)
         self.score_vector = tf.get_variable(name='score_vector',
-                                               shape=[self._dim, 1],
+                                               shape=[self._dim, 2],
                                                initializer=tf.contrib.layers.xavier_initializer(),
                                                trainable=True)
     
@@ -88,14 +91,13 @@ class SentencePairEncoder(object):
         pair_features = tf.concat([q_features, a_features], axis=1)
         pair_features = tf.nn.relu(tf.matmul(pair_features, self.linear_matrix))#(batchsize, last_dim)
         pair_features = tf.nn.dropout(pair_features, self.keep_prob)
-        scores = tf.matmul(pair_features, self.score_vector)#(batchsize, 1)
-        self.scores = tf.reshape(scores, [-1])#(batchsize,)
-        probs = tf.sigmoid(self.scores)
-        losses = - tf.cast(self.labels, tf.float32) * tf.log(probs + 1e-8) \
-                 - (1.0 - tf.cast(self.labels, tf.float32)) * tf.log(1.0 - probs + 1e-8)
+        scores = tf.matmul(pair_features, self.score_vector)#(batchsize, 2)
+        self.scores = scores[:, 1]#(batchsize,)
+        losses = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=scores, labels=self.labels))
+        #losses = - tf.cast(self.labels, tf.float32) * tf.log(probs + 1e-8) \
+        #         - (1.0 - tf.cast(self.labels, tf.float32)) * tf.log(1.0 - probs + 1e-8)
         self.loss = tf.reduce_mean(losses)
         #l2_loss = tf.constant(l2_weight) * tf.nn.l2_loss()
-        
 
 class SentencePairEncoderMPSSN(SentencePairEncoder):
   def init_extra(self):
@@ -125,15 +127,22 @@ class SentencePairEncoderMPSSN(SentencePairEncoder):
     # inputNum = 2*items*items/3+NumFilter*items*items/3+6*NumFilter+(2+NumFilter)*2*ngram*conceptFNum --PoinPercpt model!
     # self.h = 2*items*items/3 + self.num_filters[0]*items*items/3 + 6*self.num_filters[0] + (2+self.num_filters[0])*2*self.ngram*self.num_filters[1]
     self.h = 2*(3*self.num_filters[0]) + (self.num_filters[0]+2)*(3*(self.ngram + 1)*(self.ngram + 1)) + (self._embed_dim+2)*(2*self.num_filters[1]*3)
-    self.Wh = tf.Variable(tf.random_normal([self.h, self._dim], stddev=0.01), name='Wh')
+    print 'feature dimension: ' + str(self.h)
+    self.Wh = init_weight([self.h, self._dim], 'Wh')
+    #self.Wh = tf.Variable(tf.random_normal([self.h, self._dim], stddev=0.01), name='Wh')
     self.bh = tf.Variable(tf.constant(0.1, shape=[self._dim]), name="bh")
 
-    self.Wo = tf.Variable(tf.random_normal([self._dim, self.num_classes], stddev=0.01), name='Wo')
+    self.Wo = init_weight([self._dim, self.num_classes], 'Wo')
+    #self.Wo = tf.Variable(tf.random_normal([self._dim, self.num_classes], stddev=0.01), name='Wo')
 
   def produce_feature(self, sentences, lens):
     with tf.name_scope("embendding"):
       embed_layer = tf.nn.embedding_lookup(self.word_embeddings, sentences)
+      self.sentences = sentences
+      self.embed_layer = embed_layer
       embed_layer_mask = tf.expand_dims(tf.cast(tf.sequence_mask(lens, self._seq_length), tf.float32), 2) * embed_layer
+      #embed_layer_mask = embed_layer
+      self.embed_layer_mask = embed_layer_mask
     with tf.name_scope("reshape"):
       result = tf.reshape(embed_layer_mask, [-1, self._seq_length, self._embed_dim, 1])
     return result
@@ -144,23 +153,23 @@ class SentencePairEncoderMPSSN(SentencePairEncoder):
     a_features = self.produce_feature(self.input_answers, self.input_answer_lens)
     # self.labels = tf.expand_dims(self.labels, 1)
     # bloack A
-    sent1 = self.bulit_block_A(q_features)
+    sent1 = self.bulit_block_A(q_features)#pool_type_num, window_type_nums, (batch_size, 1, num_filter_A)
     sent2 = self.bulit_block_A(a_features)
-    fea_h = []
+    fea_h = []#3 * num_filter_A * (batchsize, 2) 
     with tf.name_scope("cal_dis_with_alg1"):
       for i in range(3):
-        regM1 = tf.concat(sent1[i], 1)
+        regM1 = tf.concat(sent1[i], 1)#(batch_size, window_type_nums, num_filter_A)
         regM2 = tf.concat(sent2[i], 1)
         for k in range(self.num_filters[0]):
-          fea_h.append(comU2(regM1[:, :, k], regM2[:, :, k]))
-    fea_a = []
+          fea_h.append(comU2(regM1[:, :, k], regM2[:, :, k]))#(batchsize,2)
+    fea_a = []#3 * 4 * 4 * (batchsize, num_filter_A + 2)
     with tf.name_scope("cal_dis_with_alg2_2-9"):
       for i in range(3):
         for j in range(len(self.filter_sizes)):
           for k in range(len(self.filter_sizes)):
-            fea_a.append(comU1(sent1[i][j][:, 0, :], sent2[i][k][:, 0, :]))
+            fea_a.append(comU1(sent1[i][j][:, 0, :], sent2[i][k][:, 0, :]))#(batchsize, num_filter_A + 2)
     # bloack B
-    sent1 = self.bulid_block_B(q_features)
+    sent1 = self.bulid_block_B(q_features)#2 * 3 * 
     sent2 = self.bulid_block_B(a_features)
     fea_b = []
     with tf.name_scope("cal_dis_with_alg2_last"):
@@ -170,6 +179,10 @@ class SentencePairEncoderMPSSN(SentencePairEncoder):
             fea_b.append(comU1(sent1[i][j][:, :, k], sent2[i][j][:, :, k]))
     # concate all features together
     fea = tf.concat(fea_h + fea_b + fea_a, 1)
+    self.fea_h = fea_h
+    self.fea_a = fea_a
+    self.fea_b = fea_b
+    self.fea = fea
     # FC layer
     with tf.name_scope("full_connect_layer"):
       # print fea.get_shape()
@@ -179,13 +192,15 @@ class SentencePairEncoderMPSSN(SentencePairEncoder):
       out = tf.matmul(h, self.Wo)
     # print out.get_shape()
     # Calc score for evaluation
+    self.out = out
     softmax_result = tf.nn.softmax(logits=out, dim=1)
-    self.scores = tf.reshape(tf.slice(softmax_result, begin=[0,1],size=[-1,1]), [-1])
+    self.scores = softmax_result[:, 1]
     # Calc loss
     losses = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=out, labels=self.labels))
     l2_loss = tf.add_n([tf.nn.l2_loss(w) for w in tf.trainable_variables() if 'word_embeddings' not in w.name])
-    reg_lambda = 0.01
-    self.loss = tf.reduce_mean(losses) + reg_lambda * l2_loss
+    self.l2_loss = l2_loss
+     
+    self.loss = tf.reduce_mean(losses) + self._regularization * l2_loss
 
   def per_dim_conv_layer(self, x, w, b, pooling):
     '''
@@ -221,7 +236,7 @@ class SentencePairEncoderMPSSN(SentencePairEncoder):
             #print conv.get_shape()
             conv = tf.nn.relu(conv + self.b1[i])  # [batch_size, sentence_length-ws+1, 1, num_filters_A]
           with tf.name_scope("pool-ws%d" %ws):
-            pool = pooling(conv, axis=1)
+            pool = pooling(conv, axis=1)# (batch_size, 1, num_filters_A)
           pools.append(pool)
         out.append(pools)
       return out

@@ -19,7 +19,7 @@ def compute_cosine_distance(x, y):
     with tf.name_scope('cosine_distance'):
         x_norm = tf.sqrt(tf.reduce_sum(tf.square(x), axis=1) + 1e-6)
         y_norm = tf.sqrt(tf.reduce_sum(tf.square(y), axis=1) + 1e-6)
-        x_y = tf.reduce_sum(tf.multiply(x, y), axis=1)
+        x_y = tf.reduce_sum(tf.multiply(x, y), axis=1) + 1e-6
         d = tf.divide(x_y, tf.multiply(x_norm, y_norm))
         return d
 

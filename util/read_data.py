@@ -13,7 +13,8 @@ def read_sentences(path, vocab, debug=False):
   file = open(path, "r")
   if debug:
     count = 0
-    while count<64:
+    while count<128:
+    #while True:
       line = file.readline().rstrip('\n')
       if line == "":
         break
@@ -32,7 +33,9 @@ def read_sentences(path, vocab, debug=False):
       sentences.append(list(sent))
       count += 1
   else:
+    count = 0
     while True:
+    #while count<128:
       line = file.readline().rstrip('\n')
       if line == "":
         break
@@ -49,6 +52,7 @@ def read_sentences(path, vocab, debug=False):
       if sent.sum() == 0:
         print('line: '+line)
       sentences.append(list(sent))
+      count += 1
   file.close()
   return sentences
 

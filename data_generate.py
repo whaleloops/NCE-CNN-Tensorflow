@@ -8,13 +8,16 @@ import pdb
 
 from evaluator import *
 
+
+
 class DataGeneratePointWise:
-    def __init__(self, model, sess, data, batch_size, max_length, sampling = 'max'):
+    def __init__(self, model, sess, data, batch_size, max_length, sampling = 'max', keep_prob=0.5):
         self.model = model
         self.data = data
         self.data_size = data['size']
         self.batch_size = batch_size
         self.max_length = max_length
+        self.keep_prob = keep_prob
     
     def padding(self, sent):
         length = len(sent)
@@ -23,6 +26,7 @@ class DataGeneratePointWise:
             sent_.extend([0] * (self.max_length - length))
         else:
             sent_ = sent_[:self.max_length]
+        #print sent_
         return sent_
     
     def next(self):
@@ -33,7 +37,9 @@ class DataGeneratePointWise:
         labels_arr = []
         for id in samples:
             bound, posbound, negbound = self.data['id2boundary'][id]
-            id_ = np.random.randint(bound[0], bound[1])
+            #id_ = np.random.randint(bound[0], bound[1])
+            id_ = id
+            #print id_
             if id_ < posbound[1]:
                 label = 1
             else:
@@ -43,26 +49,33 @@ class DataGeneratePointWise:
             ans.append(self.padding(self.data['rsents'][id_]))
             alens.append(len(self.data['rsents'][id_]))
             labels_arr.append(label)
+        #print qs[0]
+        #print ans[0]
         # To one hot
         labels_arr = np.array(labels_arr)
         labels = np.zeros((labels_arr.shape[0], num_classes))
         labels[np.arange(labels_arr.shape[0]), labels_arr] = 1
+        #print qs[0]
+        #print ans[0]
+        #print labels[0]
+        #print len(qs), len(ans), labels.shape
         feed_dict = {self.model.input_questions: np.array(qs, dtype = np.int32), 
                      self.model.input_question_lens: np.array(qlens, dtype = np.int32),
                      self.model.input_answers: np.array(ans, dtype = np.int32), 
                      self.model.input_answer_lens: np.array(alens, dtype = np.int32),
                      self.model.labels: np.array(labels, dtype = np.int32),
-                     self.model.keep_prob: np.float32(0.5)}
+                     self.model.keep_prob: np.float32(self.keep_prob)}
         return feed_dict
 
 class DataGeneratePairWise:
-    def __init__(self, model, sess, data, batch_size, max_length, sampling='max', sample_num=5):
+    def __init__(self, model, sess, data, batch_size, max_length, sampling='max', sample_num=5, keep_prob=0.5):
         self.model = model
         self.data = data
         self.data_size = data['size']
         self.batch_size = batch_size
         self.max_length = max_length
         self.sampling = sampling
+        self.keep_prob
         self.sess = sess
     
     def padding(self, sent):
@@ -102,6 +115,7 @@ class DataGeneratePairWise:
                 scores = self.sess.run(self.model.scores, feed_dict=feed_dict)
                 posid = np.random.randint(posbound[0], posbound[1])
                 negid = np.argmax(scores[:]) + negbound[0]
+                #print len(scores), posbound[1]-posbound[0], negbound[1]-negbound[0]
                 #posid = np.argmin(scores[:posbound[1]-posbound[0]]) + posbound[0]
                 #negid = np.argmax(scores[posbound[1]-posbound[0]:]) + negbound[0]
 
@@ -119,5 +133,5 @@ class DataGeneratePairWise:
                      self.model.input_answer_lens: np.array(pos_alens, dtype = np.int32),
                      self.model.neg_answers: np.array(neg_as, dtype = np.int32), 
                      self.model.neg_answer_lens: np.array(neg_alens, dtype = np.int32),
-                     self.model.keep_prob: np.float32(0.5)}
+                     self.model.keep_prob: np.float32(self.keep_prob)}
         return feed_dict
