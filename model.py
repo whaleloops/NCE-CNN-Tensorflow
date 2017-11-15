@@ -111,12 +111,10 @@ class SentencePairEncoderMPSSN(SentencePairEncoder):
 
     self.W1 = [init_weight([self.filter_sizes[0], self._embed_dim, 1, self.num_filters[0]], "W1_0"),
                init_weight([self.filter_sizes[1], self._embed_dim, 1, self.num_filters[0]], "W1_1"),
-               init_weight([self.filter_sizes[2], self._embed_dim, 1, self.num_filters[0]], "W1_2"),
-               init_weight([self.filter_sizes[3], self._embed_dim, 1, self.num_filters[0]], "W1_3")]
+               init_weight([self.filter_sizes[2], self._embed_dim, 1, self.num_filters[0]], "W1_2")]
     self.b1 = [tf.Variable(tf.constant(0.1, shape=[self.num_filters[0]]), "b1_0"),
                tf.Variable(tf.constant(0.1, shape=[self.num_filters[0]]), "b1_1"),
-               tf.Variable(tf.constant(0.1, shape=[self.num_filters[0]]), "b1_2"),
-               tf.Variable(tf.constant(0.1, shape=[self.num_filters[0]]), "b1_3")]
+               tf.Variable(tf.constant(0.1, shape=[self.num_filters[0]]), "b1_2")]
     self.W2 = [init_weight([self.filter_sizes[0], self._embed_dim, 1, self.num_filters[1]], "W2_0"),
                init_weight([self.filter_sizes[1], self._embed_dim, 1, self.num_filters[1]], "W2_1"),
                init_weight([self.filter_sizes[2], self._embed_dim, 1, self.num_filters[1]], "W2_2")]
