@@ -229,7 +229,7 @@ class SentencePairEncoderMPSSN(SentencePairEncoder):
         pools = []
         with tf.name_scope("pool-ws-infinite"):
           pool = pooling(x, axis=1)
-          pools.append(pool)
+          pools.append(tf.reshape(pool, [-1, 1, self._embed_dim]))
         for i, ws in enumerate(self.filter_sizes[:-1]): # ws: window size
           #print x.get_shape(), self.W1[i].get_shape()
           with tf.name_scope("conv-ws%d" %ws):
