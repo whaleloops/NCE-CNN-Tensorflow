@@ -229,7 +229,10 @@ class SentencePairEncoderMPSSN(SentencePairEncoder):
     with tf.name_scope("bulid_block_A"):
       for pooling in self.poolings:
         pools = []
-        for i, ws in enumerate(self.filter_sizes): # ws: window size
+        with tf.name_scope("pool-ws-infinite"):
+          pool = pooling(x, axis=1)
+          pools.append(pool)
+        for i, ws in enumerate(self.filter_sizes[:-1]): # ws: window size
           #print x.get_shape(), self.W1[i].get_shape()
           with tf.name_scope("conv-ws%d" %ws):
             conv = tf.nn.conv2d(x, self.W1[i], strides=[1, 1, 1, 1], padding="VALID")
